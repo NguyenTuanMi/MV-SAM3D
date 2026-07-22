@@ -97,11 +97,12 @@ class SAM3MultiObjectSegmenter:
                 image = Image.open(img_path).convert('RGB')
                 
                 # SAM3 分割（按照SAM4D的方式）
-                inference_state = self.processor.set_image(image)
-                output = self.processor.set_text_prompt(
-                    state=inference_state,
-                    prompt=text_prompt
-                )
+                with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                    inference_state = self.processor.set_image(image)
+                    output = self.processor.set_text_prompt(
+                        state=inference_state,
+                        prompt=text_prompt
+                    )
                 
                 masks = output["masks"]
                 scores = output["scores"]
