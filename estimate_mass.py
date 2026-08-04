@@ -98,9 +98,24 @@ def _call_vlm(
     (vLLM / Ollama / Moonshot API / etc). Import is local so this module
     doesn't hard-require the `openai` package unless this path is used.
     """
+    from urllib.parse import urlparse
+
+    import httpx
     from openai import OpenAI  # pip install openai
 
-    client = OpenAI(base_url=base_url, api_key=api_key)
+    # On networks with a corporate HTTP(S)_PROXY set, httpx (which the
+    # openai client uses) will route *localhost* requests through that
+    # proxy too unless NO_PROXY explicitly excludes it -- the proxy then
+    # can't reach our own loopback address and the call fails with a
+    # Squid/whatever "connection refused" error page. Since a local vLLM/
+    # Ollama endpoint should never go through an external proxy anyway,
+    # bypass the environment proxy config outright for loopback hosts
+    # rather than relying on NO_PROXY being set correctly in every shell.
+    host = urlparse(base_url).hostname
+    is_local = host in ("localhost", "127.0.0.1", "::1")
+    http_client = httpx.Client(trust_env=not is_local)
+
+    client = OpenAI(base_url=base_url, api_key=api_key, http_client=http_client)
     img_b64 = _encode_image_b64(image_path)
     ext = image_path.suffix.lstrip(".").lower() or "png"
 
