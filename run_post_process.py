@@ -36,7 +36,7 @@ def main():
     parser.add_argument("--estimate_mass", action="store_true")
     parser.add_argument("--export_sim_ready", action="store_true")
     parser.add_argument("--vlm_base_url", type=str, default="http://localhost:8000/v1")
-    parser.add_argument("--vlm_model", type=str, default="qwen2.5-vl-7b-instruct")
+    parser.add_argument("--vlm_model", type=str, default="Qwen/Qwen2.5-VL-7B-Instruct")
     parser.add_argument("--output_dir", type=str, default=None)
     args = parser.parse_args()
 

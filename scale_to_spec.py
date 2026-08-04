@@ -123,6 +123,15 @@ def rescale_mesh_to_spec(
 
     # avoid divide-by-zero on degenerate axes
     safe_extent = np.where(extent < 1e-9, 1e-9, extent)
+
+    # sort the input target numpy array in accordance with the trimesh dimension's order
+    target_index_order = np.argsort(target_extent)
+    extent_index_order = np.argsort(safe_extent)
+    ordered_target_extent = np.zeros(3)
+    for i in range(3):
+        ordered_target_extent[extent_index_order[i]] = target_extent[target_index_order[i]]
+    target_extent = ordered_target_extent
+
     per_axis_scale = target_extent / safe_extent
 
     max_s, min_s = per_axis_scale.max(), per_axis_scale.min()
