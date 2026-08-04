@@ -2,6 +2,10 @@
 
 MV-SAM3D is a multi-view 3D reconstruction framework that extends SAM 3D Objects to leverage observations from multiple viewpoints. It supports both single-object and multi-object generation, and is designed to produce more stable geometry, texture, and scene-level consistency. 
 
+This repository is a fork of MV-SAM3D, which contains extended features to work with simulation environments. This fork adds 2 post processing layers: 
+- Layer 1: The object will be scaled to correct dimensions
+- Layer 2: The pipeline will guess the mass of the object based on a image by consulting with a local LLM model, (Qwen/Qwen2.5-VL-7B-Instruct)
+
 ## Paper
 
 - arXiv: [https://arxiv.org/abs/2603.11633](https://arxiv.org/abs/2603.11633)
@@ -109,7 +113,7 @@ For single-object inference (`run_inference_weighted.py`), key defaults are:
 
 ## Quickstart
 
-Put images of an object captured in multi view inside the data folder. (e.g: data/your-scene-name/images). 
+Put images/image of an object captured in multi view inside the data folder. (e.g: data/your-scene-name/images). 
 
 ### Preprocessing with SAM3 to obtain masks 
 ```bash
@@ -151,7 +155,42 @@ If you don't use depth anything v3 (like I did):
 python run_inference_weighted.py   --input_path ./data/your-scene  --mask_prompt object-name
 ```
 
+### Run post processing layers
+
+Open another terminal and run these commands to launch vllm server for local LLM hosting: 
+```bash
+conda create -n qwen_mass_estimator python=3.10
+conda activate qwen_mass_estimator
+pip install vllm
+# usually just need vllm serve Qwen/Qwen2.5-VL-7B-Instruct --port 8000 but there is something wrong with my server so I need to add VLLM_USE_FLASHINFER_SAMPLER=0
+VLLM_USE_FLASHINFER_SAMPLER=0 vllm serve Qwen/Qwen2.5-VL-7B-Instruct --port 8000 
+```
+
+Navigate back to the original template where you run the sam3d to execute these commands: 
+```bash
+python run_post_process.py --glb_path "glb-path-from-inference-pipeline" --image_path "data/your-scene/images/0.png" --name name-of-object --category "object-type-for-llm-mass-guessing" --width_m object-width --height_m object-height --depth_m object-depth --estimate_mass --export_sim_ready
+```
+
+### Executing everything at one time
+
+Shell scripts are provided for fast deployments. Run this command first: 
+```bash
+chmod +x scripts/deploy/deploy.sh
+chmod +x scripts/deploy/launch_vllm.sh
+```
+
+Navigate to one terminal to run this: 
+```bash
+scripts/deploy/deploy.sh
+```
+
+Navigate to another terminal to run this: 
+```bash
+scripts/deploy/launch_vllm.sh
+```
+
 ### Noted
+
 Sometimes, you need to adjust the confidence_threshold inside the 'build_mvsam3d_dataset.py' to obtain masks for all images. 
 
 ## Results Comparison
@@ -235,30 +274,6 @@ Sometimes, you need to adjust the confidence_threshold inside the 'build_mvsam3d
   </td>
 </tr>
 </table>
-
-## Quick Start
-
-### Single-object inference
-
-```bash
-python run_inference_weighted.py \
-  --input_path ./data/example \
-  --mask_prompt stuffed_toy \
-  --da3_output ./da3_outputs/example/da3_output.npz
-```
-
-### Multi-object inference
-
-```bash
-python run_inference_weighted.py \
-  --input_path ./data/desk_objects0 \
-  --mask_prompt keyboard,speaker,mug,stuffed_toy \
-  --da3_output ./da3_outputs/desk_objects0/da3_output.npz \
-  --merge_da3_glb \
-  --run_pose_optimization
-```
-
-
 
 ## Citation
 
